@@ -22,11 +22,9 @@ export default function ThreeScene() {
 
     const container = mountRef.current;
 
-    // Scene — keep background transparent so section bg shows through
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x0d0d0d); // deep black/gray
+    scene.background = new THREE.Color(0x0d0d0d);
 
-    // Renderer (alpha: true for transparency)
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     rendererRef.current = renderer;
     renderer.setPixelRatio(window.devicePixelRatio || 1);
@@ -35,24 +33,20 @@ export default function ThreeScene() {
     renderer.domElement.style.height = "100%";
     container.appendChild(renderer.domElement);
 
-    // Camera
     const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 1000);
     cameraRef.current = camera;
     camera.position.set(0, 1, 5);
 
-    // Controls
     const controls = new OrbitControls(camera, renderer.domElement);
     controlsRef.current = controls;
     controls.enableDamping = true;
     controls.dampingFactor = 0.05;
 
-    // Lights
     scene.add(new THREE.AmbientLight(0xffffff, 0.7));
     const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
     dirLight.position.set(5, 10, 7.5);
     scene.add(dirLight);
 
-    // Resize: size renderer to the container
     const setSizeToContainer = () => {
       const width = Math.max(1, container.clientWidth);
       const height = Math.max(1, container.clientHeight);
@@ -64,62 +58,55 @@ export default function ThreeScene() {
     const ro = new ResizeObserver(setSizeToContainer);
     ro.observe(container);
 
-    // Load model
-const loader = new GLTFLoader();
-loader.load(
-  `${import.meta.env.BASE_URL}3dmodel.glb`, // ✅ works on GitHub Pages
-  (gltf) => {
-    const model = gltf.scene;
-    modelRef.current = model;
+    // ✅ Load .glb directly from public for Vercel
+    const loader = new GLTFLoader();
+    loader.load(
+      "/3dmodel.glb", // works on Vercel
+      (gltf) => {
+        const model = gltf.scene;
+        modelRef.current = model;
 
-  undefined,
-  (err) => console.error(err)
+        const box = new THREE.Box3().setFromObject(model);
+        const center = box.getCenter(new THREE.Vector3());
+        model.position.sub(center);
 
+        scene.add(model);
 
-    // Compute bounding box & center the model
-    const box = new THREE.Box3().setFromObject(model);
-    const center = box.getCenter(new THREE.Vector3());
-    model.position.sub(center);
+        const size = box.getSize(new THREE.Vector3());
+        const maxDim = Math.max(size.x, size.y, size.z);
+        const fov = (camera.fov * Math.PI) / 180;
+        let cameraZ = Math.abs((maxDim / 2) / Math.tan(fov / 2));
+        cameraZ *= 1.6;
+        camera.position.set(0, size.y * 0.15, cameraZ);
+        controls.target.set(0, size.y * 0.05, 0);
+        controls.update();
 
-    scene.add(model);
+        // Hotspots
+        const dotGeometry = new THREE.SphereGeometry(Math.max(size.y * 0.02, 0.02), 16, 16);
+        const dotMaterial = new THREE.MeshBasicMaterial({ color: 0xff4444 });
 
-    // Frame the camera
-    const size = box.getSize(new THREE.Vector3());
-    const maxDim = Math.max(size.x, size.y, size.z);
-    const fov = (camera.fov * Math.PI) / 180;
-    let cameraZ = Math.abs((maxDim / 2) / Math.tan(fov / 2));
-    cameraZ *= 1.6;
-    camera.position.set(0, size.y * 0.15, cameraZ);
-    controls.target.set(0, size.y * 0.05, 0);
-    controls.update();
+        const hotspots = [
+          { pos: new THREE.Vector3(0, size.y * 0.4, 0), text: "Display / Screen" },
+          { pos: new THREE.Vector3(size.x * 0.28, -size.y * 0.18, size.z * 0.45), text: "Card / Ticket Slot" },
+          { pos: new THREE.Vector3(-size.x * 0.28, size.y * 0.18, size.z * 0.45), text: "Camera / Sensor" },
+        ];
 
-    // Hotspots
-    const dotGeometry = new THREE.SphereGeometry(Math.max(size.y * 0.02, 0.02), 16, 16);
-    const dotMaterial = new THREE.MeshBasicMaterial({ color: 0xff4444 });
+        const hotspotMeshes = [];
+        hotspots.forEach(({ pos, text }) => {
+          const dot = new THREE.Mesh(dotGeometry, dotMaterial);
+          dot.position.copy(pos);
+          dot.userData = { text };
+          model.add(dot);
+          hotspotMeshes.push(dot);
+        });
+        hotspotMeshesRef.current = hotspotMeshes;
+      },
+      undefined,
+      (err) => {
+        console.error("Failed to load 3dmodel.glb", err);
+      }
+    );
 
-    const hotspots = [
-      { pos: new THREE.Vector3(0, size.y * 0.4, 0), text: "Display / Screen" },
-      { pos: new THREE.Vector3(size.x * 0.28, -size.y * 0.18, size.z * 0.45), text: "Card / Ticket Slot" },
-      { pos: new THREE.Vector3(-size.x * 0.28, size.y * 0.18, size.z * 0.45), text: "Camera / Sensor" },
-    ];
-
-    const hotspotMeshes = [];
-    hotspots.forEach(({ pos, text }) => {
-      const dot = new THREE.Mesh(dotGeometry, dotMaterial);
-      dot.position.copy(pos);
-      dot.userData = { text };
-      model.add(dot);
-      hotspotMeshes.push(dot);
-    });
-    hotspotMeshesRef.current = hotspotMeshes;
-  },
-  undefined,
-  (err) => {
-    console.error("Failed to load 3dmodel.glb", err);
-  }
-);
-
-    // Raycasting
     const raycaster = new THREE.Raycaster();
     const mouse = new THREE.Vector2();
 
@@ -162,10 +149,7 @@ loader.load(
       rafId = requestAnimationFrame(animate);
       controls.update();
 
-      // 🔹 Rotate model slowly around Y-axis
-      if (modelRef.current) {
-        modelRef.current.rotation.y += 0.002; // adjust for speed
-      }
+      if (modelRef.current) modelRef.current.rotation.y += 0.002;
 
       if (selectedDotRef.current && rendererRef.current) {
         const rect = rendererRef.current.domElement.getBoundingClientRect();
