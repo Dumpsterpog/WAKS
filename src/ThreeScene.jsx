@@ -67,10 +67,13 @@ export default function ThreeScene() {
     // Load model
 const loader = new GLTFLoader();
 loader.load(
-  `${import.meta.env.BASE_URL}3dmodel.glb`, // ← updated path for GitHub Pages
+  `/WAKS/3dmodel.glb`, // ← absolute path matching your repo name
   (gltf) => {
-    const model = gltf.scene;
-    modelRef.current = model;
+    modelRef.current = gltf.scene;
+    scene.add(modelRef.current);
+  
+  undefined,
+  (err) => console.error(err)
 
     // Compute bounding box & center the model
     const box = new THREE.Box3().setFromObject(model);
