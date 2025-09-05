@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "homepage": "https://Dumpsterpog.github.io/WAKS", 
+  "homepage": "https://Dumpsterpog.github.io/WAKS",
   "scripts": {
     "dev": "vite",
     "build": "vite build",

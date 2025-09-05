@@ -65,55 +65,55 @@ export default function ThreeScene() {
     ro.observe(container);
 
     // Load model
-    const loader = new GLTFLoader();
-    loader.load(
-      "/3dmodel.glb",
-      (gltf) => {
-        const model = gltf.scene;
-        modelRef.current = model;
+const loader = new GLTFLoader();
+loader.load(
+  `${import.meta.env.BASE_URL}3dmodel.glb`, // ← updated path for GitHub Pages
+  (gltf) => {
+    const model = gltf.scene;
+    modelRef.current = model;
 
-        // Compute bounding box & center the model
-        const box = new THREE.Box3().setFromObject(model);
-        const center = box.getCenter(new THREE.Vector3());
-        model.position.sub(center);
+    // Compute bounding box & center the model
+    const box = new THREE.Box3().setFromObject(model);
+    const center = box.getCenter(new THREE.Vector3());
+    model.position.sub(center);
 
-        scene.add(model);
+    scene.add(model);
 
-        // Frame the camera
-        const size = box.getSize(new THREE.Vector3());
-        const maxDim = Math.max(size.x, size.y, size.z);
-        const fov = (camera.fov * Math.PI) / 180;
-        let cameraZ = Math.abs((maxDim / 2) / Math.tan(fov / 2));
-        cameraZ *= 1.6;
-        camera.position.set(0, size.y * 0.15, cameraZ);
-        controls.target.set(0, size.y * 0.05, 0);
-        controls.update();
+    // Frame the camera
+    const size = box.getSize(new THREE.Vector3());
+    const maxDim = Math.max(size.x, size.y, size.z);
+    const fov = (camera.fov * Math.PI) / 180;
+    let cameraZ = Math.abs((maxDim / 2) / Math.tan(fov / 2));
+    cameraZ *= 1.6;
+    camera.position.set(0, size.y * 0.15, cameraZ);
+    controls.target.set(0, size.y * 0.05, 0);
+    controls.update();
 
-        // Hotspots
-        const dotGeometry = new THREE.SphereGeometry(Math.max(size.y * 0.02, 0.02), 16, 16);
-        const dotMaterial = new THREE.MeshBasicMaterial({ color: 0xff4444 });
+    // Hotspots
+    const dotGeometry = new THREE.SphereGeometry(Math.max(size.y * 0.02, 0.02), 16, 16);
+    const dotMaterial = new THREE.MeshBasicMaterial({ color: 0xff4444 });
 
-        const hotspots = [
-          { pos: new THREE.Vector3(0, size.y * 0.4, 0), text: "Display / Screen" },
-          { pos: new THREE.Vector3(size.x * 0.28, -size.y * 0.18, size.z * 0.45), text: "Card / Ticket Slot" },
-          { pos: new THREE.Vector3(-size.x * 0.28, size.y * 0.18, size.z * 0.45), text: "Camera / Sensor" },
-        ];
+    const hotspots = [
+      { pos: new THREE.Vector3(0, size.y * 0.4, 0), text: "Display / Screen" },
+      { pos: new THREE.Vector3(size.x * 0.28, -size.y * 0.18, size.z * 0.45), text: "Card / Ticket Slot" },
+      { pos: new THREE.Vector3(-size.x * 0.28, size.y * 0.18, size.z * 0.45), text: "Camera / Sensor" },
+    ];
 
-        const hotspotMeshes = [];
-        hotspots.forEach(({ pos, text }) => {
-          const dot = new THREE.Mesh(dotGeometry, dotMaterial);
-          dot.position.copy(pos);
-          dot.userData = { text };
-          model.add(dot);
-          hotspotMeshes.push(dot);
-        });
-        hotspotMeshesRef.current = hotspotMeshes;
-      },
-      undefined,
-      (err) => {
-        console.error("Failed to load /3dmodel.glb", err);
-      }
-    );
+    const hotspotMeshes = [];
+    hotspots.forEach(({ pos, text }) => {
+      const dot = new THREE.Mesh(dotGeometry, dotMaterial);
+      dot.position.copy(pos);
+      dot.userData = { text };
+      model.add(dot);
+      hotspotMeshes.push(dot);
+    });
+    hotspotMeshesRef.current = hotspotMeshes;
+  },
+  undefined,
+  (err) => {
+    console.error("Failed to load 3dmodel.glb", err);
+  }
+);
 
     // Raycasting
     const raycaster = new THREE.Raycaster();
